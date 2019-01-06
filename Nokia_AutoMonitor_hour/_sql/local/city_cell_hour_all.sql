@@ -1,0 +1,1 @@
+select * from city_cell_hour_all
