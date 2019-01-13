@@ -8,8 +8,19 @@ import cx_Oracle
 import traceback
 import datetime
 import sqlite3
+import random
 import csv
 import time
+from io import BytesIO
+import base64
+from matplotlib import pyplot as plt
+
+font = {'family': 'SimHei',
+        'weight': 'bold',
+        # 'size': '16'
+        }
+plt.rc('font', **font)
+plt.rc('axes', unicode_minus=False)
 
 
 class Main:
@@ -20,7 +31,8 @@ class Main:
         # 获取配置文件
         self.config_list = {}
         self.get_config()
-        self.temp_time = time.strftime('%Y_%m_%d_%H_%M_%S', time.localtime())
+        self.temp_time_now = datetime.datetime.now()
+        self.temp_time = self.temp_time_now.strftime('%Y_%m_%d_%H_%M_%S')
 
     def get_config(self):
         # 初始化配置列表
@@ -39,11 +51,12 @@ class Main:
                     next(temp_iter_rows)
                     for temp_row in temp_iter_rows:
                         temp_value = [j.value for j in temp_row]
-                        self.config_list[temp_sheet_name][temp_value[0]] = [
-                            temp_value[1],
-                            temp_value[2],
-                            temp_value[3]
-                        ]
+                        if temp_value[4] == '启用':
+                            self.config_list[temp_sheet_name][temp_value[0]] = [
+                                temp_value[1],
+                                temp_value[2],
+                                temp_value[3]
+                            ]
                 elif temp_sheet_name == 'sql_script_map':
                     temp_iter_rows = temp_f_base_data_wb_sheet.iter_rows()
                     next(temp_iter_rows)
@@ -52,6 +65,34 @@ class Main:
                         if temp_value[2] == '启用':
                             self.config_list[temp_sheet_name][temp_value[
                                 1]] = temp_value[0]
+
+                elif temp_sheet_name == 'sql_script_map_local':
+                    temp_iter_rows = temp_f_base_data_wb_sheet.iter_rows()
+                    next(temp_iter_rows)
+                    for temp_row in temp_iter_rows:
+                        temp_value = [j.value for j in temp_row]
+                        if temp_value[2] == '启用':
+                            self.config_list[temp_sheet_name][temp_value[
+                                1]] = temp_value[0]
+
+                elif temp_sheet_name == 'report_table_range':
+                    temp_iter_rows = temp_f_base_data_wb_sheet.iter_rows()
+                    next(temp_iter_rows)
+                    for temp_row in temp_iter_rows:
+                        temp_value = [j.value for j in temp_row]
+                        self.config_list[temp_sheet_name][temp_value[
+                            0]] = temp_value[1:]
+
+                elif temp_sheet_name == '生成图表kpi':
+                    self.config_list[temp_sheet_name] = []
+                    temp_iter_rows = temp_f_base_data_wb_sheet.iter_rows()
+                    next(temp_iter_rows)
+                    for temp_row in temp_iter_rows:
+                        temp_value = [j.value for j in temp_row]
+                        if temp_value[1] == '启用':
+                            self.config_list[temp_sheet_name].append(
+                                temp_value[0])
+
                 else:
                     for temp_row in temp_f_base_data_wb_sheet.iter_rows():
                         temp_value = [j.value for j in temp_row]
@@ -105,18 +146,17 @@ class Main:
 
         if connect_state == 1:
             for temp_sql in self.config_list['sql_script_map']:
-                print(temp_sql)
                 self.online_get_data(
                     self.get_sql_text(
                         temp_sql,
                         'online',
-                        self.config_list['sql_script_map'][temp_sql]
-                    ),
-                    cc)
+                        self.config_list['sql_script_map'][temp_sql],
+                        db_name
+                    ), cc)
 
                 try:
-                    if cc.fetchall() is not None:
-                        temp_data = DataFrame(cc.fetchall())
+                    temp_data = DataFrame(cc.fetchall())
+                    if temp_data is not None:
                         temp_head = [i[0] for i in cc.description]
                         temp_data.rename(
                             columns={
@@ -124,16 +164,48 @@ class Main:
                             },
                             inplace=True
                         )
-
                         if len(temp_data) != 0:
                             data_list[temp_sql] = temp_data
+                            f_base_data_wb = openpyxl.load_workbook(
+                                            path_base_data_log, read_only=False)
+
+                            temp_f_base_data_wb_sheet = f_base_data_wb[
+                                '数据采集记录表']
+                            for temp_sdate in sorted(list(set(
+                                    temp_data.SDATE))):
+                                temp_low = [
+                                    db_name,
+                                    temp_sql,
+                                    temp_sdate,
+                                ]
+                                temp_f_base_data_wb_sheet.append(temp_low)
+
+                            a = 1
+                            b = 1
+                            while a == 1:
+                                if b < 5:
+                                    try:
+                                        f_base_data_wb.save(
+                                            path_base_data_log)
+                                        a = 0
+                                    except:
+                                        print(
+                                            '>>> {0}等待数据写入,'
+                                            '重试次数{1}....'.format(db_name, b)
+                                        )
+                                        time.sleep(random.randint(1, 5))
+                                        b += 1
+                                else:
+                                    print(
+                                        '>>> 数据采集记录表.xlsx写入异常，请检查!')
+                                    a = 0
 
                 except:
                     traceback.print_exc()
         return data_list
 
-    def get_sql_text(self, sql_name, online_type, time_type):
-        sql_text = '__'
+    def get_sql_text(self, sql_name, online_type, time_type, temp_cp):
+        sql_text = ''
         temp_sql_full_name = os.path.join(
             self.main_path,
             '_sql',
@@ -142,11 +214,18 @@ class Main:
         )
         try:
             f = open(temp_sql_full_name)
-            temp_start_time, temp_end_time = self.get_sql_between_time(
-                time_type
-            )
+            temp_time_list = self.get_sql_between_time(time_type, temp_cp,
+                                                       sql_name)
+            temp_start_time = temp_time_list[0]
+            temp_end_time = temp_time_list[1]
+            temp_time_item = temp_time_list[2]
+            temp_time_item_format = ''
+            for temp_item in temp_time_item:
+                temp_time_item_format += r"to_date({0}, 'yyyymmddhh24')," \
+                                         r"".format(temp_item)
+
             sql_text = f.read().replace('&1', temp_start_time).replace(
-                '&2', temp_end_time)
+                '&2', temp_end_time).replace('&3', temp_time_item_format[:-1])
         except:
             traceback.print_exc()
         return sql_text
@@ -158,29 +237,80 @@ class Main:
         except:
             traceback.print_exc()
 
-    def get_sql_between_time(self, time_type):
-        starttime = 0
-        endtime = 0
+    def get_sql_between_time_simp(self, time_type, int_num):
+        start_time = 0
+        end_time = 0
         if time_type == 'hour':
-            starttime = (datetime.datetime.now() - datetime.timedelta(
+            start_time = (self.temp_time_now - datetime.timedelta(
+                hours=int_num)).strftime('%Y%m%d%H')
+            end_time = self.temp_time_now.strftime('%Y%m%d%H')
+
+        return str(start_time), str(end_time)
+
+    def get_sql_between_time(self, time_type, temp_cp, temp_sql_name):
+        start_time = 0
+        end_time = 0
+        time_item = []
+        exit_time_list = {}
+        global path_base_data_log
+        path_base_data_log = os.path.join(
+            self.main_path,
+            '_db',
+            '数据采集记录表.xlsx')
+        f_base_data_wb = openpyxl.load_workbook(
+            path_base_data_log, read_only=True)
+        for temp_sheet_name in f_base_data_wb.sheetnames:
+            if temp_sheet_name not in exit_time_list:
+                exit_time_list[temp_sheet_name] = {}
+            temp_f_base_data_wb_sheet = f_base_data_wb[temp_sheet_name]
+            if temp_sheet_name == '数据采集记录表':
+                temp_iter_rows = temp_f_base_data_wb_sheet.iter_rows()
+                next(temp_iter_rows)
+                for temp_row in temp_iter_rows:
+                    temp_value = [j.value for j in temp_row]
+                    if temp_value[0] not in exit_time_list[temp_sheet_name]:
+                        exit_time_list[temp_sheet_name][temp_value[0]] = {}
+                    if temp_value[1] not in exit_time_list[temp_sheet_name][
+                            temp_value[0]]:
+                        exit_time_list[temp_sheet_name][temp_value[
+                            0]][temp_value[1]] = {}
+                    exit_time_list[temp_sheet_name][temp_value[
+                        0]][temp_value[1]][temp_value[2]] = temp_value[3]
+
+        if time_type == 'hour':
+            start_time = (self.temp_time_now - datetime.timedelta(
                 hours=self.config_list['main']['获取最近连续时段数']
             )).strftime('%Y%m%d%H')
-            endtime = datetime.datetime.now().strftime('%Y%m%d%H')
-        return starttime, endtime
+            end_time = self.temp_time_now.strftime('%Y%m%d%H')
+
+            for temp_i in range(self.config_list['main']['获取最近连续时段数']+1):
+                temp_time_item = (self.temp_time_now - datetime.timedelta(
+                    hours=temp_i)).strftime('%Y%m%d%H')
+                try:
+                    if temp_time_item not in exit_time_list['数据采集记录表'][
+                            temp_cp][temp_sql_name]:
+                        time_item.append(temp_time_item)
+                except:
+                    time_item.append(temp_time_item)
+
+        return str(start_time), str(end_time), set(time_item)
 
     def online_db_input_warehousing(self, temp_data_list):
-        local_conn = sqlite3.connect(
-            os.path.join(self.main_path, '_db', 'db.db'),
-            check_same_thread=False
-        )
-        for temp_sql in temp_data_list:
-            pandas.io.sql.to_sql(
-                temp_data_list[temp_sql],
-                temp_sql,
-                con=local_conn,
-                if_exists='append'
+        try:
+            local_conn = sqlite3.connect(
+                os.path.join(self.main_path, '_db', 'db.db'),
+                check_same_thread=False
             )
-        local_conn.close()
+            for temp_sql in temp_data_list:
+                pandas.io.sql.to_sql(
+                    temp_data_list[temp_sql],
+                    temp_sql,
+                    con=local_conn,
+                    if_exists='append'
+                )
+            local_conn.close()
+        except:
+            traceback.print_exc()
 
     def write_kpi_detail(self, report_name, temp_cu):
         try:
@@ -235,26 +365,172 @@ class Main:
         )
 
         cu = local_conn.cursor()
-        for temp_local_sql in self.config_list['sql_script_map']:
+        for temp_local_sql in self.config_list['sql_script_map_local']:
             f_sql = open(
                 os.path.join(
                     self.main_path,
                     '_sql/local',
                     ''.join((temp_local_sql, '.sql'))
-                ),
-                encoding='utf-8-sig'
+                ), encoding='utf-8-sig'
             )
             sql_scr = f_sql.read()
+            if temp_local_sql == 'city_hour-日常监控':
+                temp_time_list = self.get_sql_between_time_simp(
+                    'hour', self.config_list['main']['获取最近连续时段数'])
+                temp_start_time = temp_time_list[0]
+                temp_end_time = temp_time_list[1]
+                sql_scr = sql_scr.replace(
+                    '&1', temp_start_time).replace('&2', temp_end_time)
             try:
                 cu.execute(sql_scr)
                 self.write_kpi_detail(temp_local_sql, cu)
             except:
-                pass
+                traceback.print_exc()
+
+    def report_table_class(self, kpi_name, kpi_value):
+        temp_table_str = """      <td>"""
+        temp_table_str += str(kpi_value)
+        temp_table_str += """</td>\n"""
+
+        if kpi_name in self.config_list['report_table_range']:
+
+            if self.config_list['report_table_range'][kpi_name][0] == '表头':
+                temp_table_str = """      <th>"""
+                temp_table_str += str(kpi_value)
+                temp_table_str += """</th>\n"""
+
+            elif self.config_list['report_table_range'][kpi_name][0] == '<':
+                if self.config_list['report_table_range'][kpi_name][2] is None:
+                    if kpi_value <= self.config_list[
+                            'report_table_range'][kpi_name][1]:
+                        temp_table_str = """      <td><b><font 
+                        color="#B8860B">"""
+                        temp_table_str += str(kpi_value)
+                        temp_table_str += """</font></b></td>\n"""
+                else:
+                    if kpi_value <= self.config_list['report_table_range'][
+                            kpi_name][2]:
+                        temp_table_str = """      <td><b>"""
+                        temp_table_str += """<font color="#FF0000">"""
+                        temp_table_str += str(kpi_value)
+                        temp_table_str += """</font></b></td>\n"""
+                    elif kpi_value <= self.config_list['report_table_range'][
+                            kpi_name][1]:
+                        temp_table_str = """      <td><b>"""
+                        temp_table_str += """<font color="#B8860B">"""
+                        temp_table_str += str(kpi_value)
+                        temp_table_str += """</font></b></td>\n"""
+
+            elif self.config_list['report_table_range'][kpi_name][0] == '>':
+                if self.config_list['report_table_range'][kpi_name][2] is None:
+                    if kpi_value >= self.config_list[
+                            'report_table_range'][kpi_name][1]:
+                        temp_table_str = """      <td><b>"""
+                        temp_table_str += """<font color="#B8860B">"""
+                        temp_table_str += str(kpi_value)
+                        temp_table_str += """</font></b></td>\n"""
+                else:
+                    if kpi_value >= self.config_list['report_table_range'][
+                            kpi_name][2]:
+                        temp_table_str = """      <td><b>"""
+                        temp_table_str += """<font color="#FF0000">"""
+                        temp_table_str += str(kpi_value)
+                        temp_table_str += """</font></b></td>\n"""
+                    elif kpi_value >= self.config_list['report_table_range'][
+                            kpi_name][1]:
+                        temp_table_str = """      <td><b>"""
+                        temp_table_str += """<font color="#B8860B">"""
+                        temp_table_str += str(kpi_value)
+                        temp_table_str += """</font></b></td>\n"""
+        return temp_table_str
+
+    def to_html(self, df):
+
+        table_str = """<table border="1" bordercolor="#B0C4DE" """
+        table_str += """class="dataframe" cellspacing="0" """
+        table_str += """style="text-align: "center">\n"""
+        table_str += """  <thead>\n"""
+
+        temp_columns_name_list = df.columns.values.tolist()
+
+        table_str += """    <tr style="background-color:#EEF0F4"">\n"""
+
+        for temp_head_row in temp_columns_name_list:
+            table_str += """      <th>"""
+            table_str += str(temp_head_row)
+            table_str += """</th>\n"""
+
+        table_str += """    </tr>\n"""
+        table_str += """  </thead>\n"""
+        table_str += """  <tbody style="background-color:#F6F8FA">\n"""
+
+        for temp_index, temp_row in df.iterrows():
+            table_str += """    <tr>\n"""
+            temp_value_dict = dict(temp_row)
+            for temp_columns_name in temp_columns_name_list:
+                table_str += self.report_table_class(
+                    temp_columns_name,
+                    temp_value_dict[temp_columns_name]
+                )
+            table_str += """    </tr>\n"""
+
+        table_str += """  </tbody>\n"""
+        table_str += """</table>\n"""
+
+        return table_str
+
+    def to_image(self, df, kpi_name):
+        # 清除前面图表
+        plt.figure()
+        temp_x, temp_data_list = self.to_image_df(df, kpi_name)
+        for temp_data in temp_data_list:
+            plt.plot(temp_x, temp_data[0], label=temp_data[1])
+        # plt.ylim(98,100)
+        plt.legend()
+        # plt.legend(loc='upper left')
+        plt.title(kpi_name)
+        # plt.show()
+        # plt.grid(True)
+        buffer = BytesIO()
+        plt.savefig(buffer)
+        plot_data = buffer.getvalue()
+        imb = base64.b64encode(plot_data)
+        ims = imb.decode()
+        imd = "data:image/png;base64," + ims
+        iris_im = """<img src="%s">""" % imd
+        return iris_im
+
+    @staticmethod
+    def to_image_df(df, kpi_name):
+
+        temp_v = [str(i)[-2:] for i in list(df[df['CITY'] == '潮州']['SDATE'])]
+        temp_city_list = sorted(list(set(df['CITY'])))
+
+        temp_data_list = [
+            [df[df[u'CITY'] == temp_city][
+                 [kpi_name]], temp_city] for temp_city in temp_city_list
+        ]
+
+        return temp_v, temp_data_list
 
     def report(self):
-        df = pandas.read_excel(kpi_list_temp, sheet_name='city_hour-日常监控')
-        print(df)
-        df.to_html('11.html')
+        df = pandas.read_excel(
+            kpi_list_temp,
+            sheet_name='city_hour-日常监控',
+            index_col=False
+        )
+        temp_html = ''
+        temp_time_list = self.get_sql_between_time_simp(
+            'hour', self.config_list['main']['报告报表呈现时段数'])
+        # temp_html += self.to_html(df)
+        temp_html += self.to_html(
+            df[df.SDATE >= int(temp_time_list[0])]
+        )
+        for temp_kpi in self.config_list['生成图表kpi']:
+            temp_html += self.to_image(df, temp_kpi)
+
+        with open('123.html', 'w') as f_html:
+            f_html.write(temp_html)
 
 
 if __name__ == '__main__':
@@ -262,7 +538,7 @@ if __name__ == '__main__':
     print(''.join((time.strftime('%Y/%m/%d %H:%M:%S', time.localtime()))))
     star_time = time.time()
     main = Main()
-    # main.online_db_process()
+    main.online_db_process()
     main.local_db_operator()
     main.report()
     print(''.join((time.strftime('%Y/%m/%d %H:%M:%S', time.localtime()))))

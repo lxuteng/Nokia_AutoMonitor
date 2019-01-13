@@ -248,7 +248,7 @@ to_char(period_start_time,'yyyymmddhh24') sdate
 FROM NOKLTE_PS_LCELLD_lncel_hour PMRAW
 where
 ---to_char(period_start_time,'yyyymmddhh24') >= to_char(SYSDATE-1,'yyyymmddhh24')
-period_start_time between to_date(&1,'yyyymmddhh24') and to_date(&2,'yyyymmddhh24')
+period_start_time in (&3)
 -- and to_char(period_start_time,'yyyymmddhh24') <= to_char(SYSDATE-1,'yyyymmddhh24')
 --AND PERIOD_DURATION=15
 group by
@@ -311,7 +311,7 @@ to_char(period_start_time,'yyyymmddhh24') sdate
 FROM NOKLTE_PV_LPQUL_lncel_hour PMRAW
 where
 
-period_start_time between to_date(&1,'yyyymmddhh24') and to_date(&2,'yyyymmddhh24')
+period_start_time in (&3)
 
 group by
 to_char(period_start_time,'yyyymmddhh24'),LNCEL_ID,to_char(period_start_time,'yyyymmddhh24')||LNCEL_ID
@@ -365,7 +365,7 @@ from
 NOKLTE_PS_LEPSB_lncel_hour PMRAW
 where
 
-period_start_time between to_date(&1,'yyyymmddhh24') and to_date(&2,'yyyymmddhh24')
+period_start_time in (&3)
 ---- to_char(period_start_time,'yyyymmddhh24') >= to_char(SYSDATE-1,'yyyymmddhh24')
 -- and to_char(period_start_time,'yyyymmddhh24') <= to_char(SYSDATE-1,'yyyymmddhh24')
 --AND PERIOD_DURATION=15
@@ -382,7 +382,7 @@ to_char(period_start_time,'yyyymmddhh24') sdate
 from
 NOKLTE_PS_LRDB_lncel_hour PMRAW
 where
-period_start_time between to_date(&1,'yyyymmddhh24') and to_date(&2,'yyyymmddhh24')
+period_start_time in (&3)
 --- to_char(period_start_time,'yyyymmddhh24') >= to_char(SYSDATE-1,'yyyymmddhh24')
 -- and to_char(period_start_time,'yyyymmddhh24') <= to_char(SYSDATE-1,'yyyymmddhh24')
 --AND PERIOD_DURATION=15
@@ -399,7 +399,7 @@ to_char(period_start_time,'yyyymmddhh24') sdate
 from
 NOKLTE_PS_LRRC_lncel_hour PMRAW
 where
-period_start_time between to_date(&1,'yyyymmddhh24') and to_date(&2,'yyyymmddhh24')
+period_start_time in (&3)
 --- to_char(period_start_time,'yyyymmddhh24') >= to_char(SYSDATE-1,'yyyymmddhh24')
 -- and to_char(period_start_time,'yyyymmddhh24') <= to_char(SYSDATE-1,'yyyymmddhh24')
 --AND PERIOD_DURATION=15
@@ -418,7 +418,7 @@ to_char(period_start_time,'yyyymmddhh24') sdate
 from
 NOKLTE_PS_LIANBHO_lncel_hour PMRAW
 where
-period_start_time between to_date(&1,'yyyymmddhh24') and to_date(&2,'yyyymmddhh24')
+period_start_time in (&3)
 --- to_char(period_start_time,'yyyymmddhh24') >= to_char(SYSDATE-1,'yyyymmddhh24')
 -- and to_char(period_start_time,'yyyymmddhh24') <= to_char(SYSDATE-1,'yyyymmddhh24')
 --AND PERIOD_DURATION=15
@@ -450,7 +450,7 @@ to_char(period_start_time,'yyyymmddhh24') sdate
 from
 NOKLTE_PS_LPQDL_lncel_hour PMRAW
 where
-period_start_time between to_date(&1,'yyyymmddhh24') and to_date(&2,'yyyymmddhh24')
+period_start_time in (&3)
 
 group by
 to_char(period_start_time,'yyyymmddhh24'),LNCEL_ID,to_char(period_start_time,'yyyymmddhh24')||LNCEL_ID
@@ -474,7 +474,7 @@ from
 NOKLTE_PS_LCELLR_lncel_hour PMRAW
 where
 
-period_start_time between to_date(&1,'yyyymmddhh24') and to_date(&2,'yyyymmddhh24')
+period_start_time in (&3)
 
 group by
 to_char(period_start_time,'yyyymmddhh24'),LNCEL_ID,to_char(period_start_time,'yyyymmddhh24')||LNCEL_ID
@@ -507,7 +507,7 @@ from
 NOKLTE_PS_LCELLT_lncel_hour PMRAW,ctp_common_objects lnbts,ctp_common_objects lncel
 where
 
-period_start_time between to_date(&1,'yyyymmddhh24') and to_date(&2,'yyyymmddhh24')
+period_start_time in (&3)
 
 
 AND PMRAW.LNCEL_ID=lncel.co_gid
@@ -555,7 +555,7 @@ to_char(period_start_time,'yyyymmddhh24') sdate
 from
 NOKLTE_PS_LUEST_lncel_hour PMRAW--,ctp_common_objects lnbts,ctp_common_objects lncel
 where
-period_start_time between to_date(&1,'yyyymmddhh24') and to_date(&2,'yyyymmddhh24')
+period_start_time in (&3)
 
 group by
 to_char(period_start_time,'yyyymmddhh24'),MRBTS_ID,LNBTS_ID,LNCEL_ID,to_char(period_start_time,'yyyymmddhh24')||LNCEL_ID
@@ -576,7 +576,7 @@ from
 NOKLTE_PS_LIENBHO_lncel_hour PMRAW
 where
 
-period_start_time between to_date(&1,'yyyymmddhh24') and to_date(&2,'yyyymmddhh24')
+period_start_time in (&3)
 group by
 to_char(period_start_time,'yyyymmddhh24'),LNCEL_ID,to_char(period_start_time,'yyyymmddhh24')||LNCEL_ID
 )M8014,
@@ -595,7 +595,7 @@ to_char(period_start_time,'yyyymmddhh24') sdatetime
 from
 NOKLTE_PS_LNCELHO_lncel_hour PMRAW
 where
-period_start_time between to_date(&1,'yyyymmddhh24') and to_date(&2,'yyyymmddhh24')
+period_start_time in (&3)
 group by
 to_char(period_start_time,'yyyymmddhh24'),LNCEL_ID,to_char(period_start_time,'yyyymmddhh24')||LNCEL_ID
 )M8015,(
@@ -611,7 +611,7 @@ to_char(period_start_time,'yyyymmddhh24') sdatetime
 from
 NOKLTE_PS_LISHO_lncel_hour PMRAW
 where
-period_start_time between to_date(&1,'yyyymmddhh24') and to_date(&2,'yyyymmddhh24')
+period_start_time in (&3)
 
 group by
 to_char(period_start_time,'yyyymmddhh24'),LNCEL_ID,to_char(period_start_time,'yyyymmddhh24')||LNCEL_ID
@@ -633,7 +633,7 @@ to_char(period_start_time,'yyyymmddhh24') sdatetime
 from
 NOKLTE_PS_LCELAV_lncel_hour  PMRAW
 where
-period_start_time between to_date(&1,'yyyymmddhh24') and to_date(&2,'yyyymmddhh24')
+period_start_time in (&3)
 --AND PERIOD_DURATION=15
 group by
 to_char(period_start_time,'yyyymmddhh24'),MRBTS_ID,LNBTS_ID,LNCEL_ID,to_char(period_start_time,'yyyymmddhh24')||LNCEL_ID
@@ -655,7 +655,7 @@ to_char(period_start_time,'yyyymmddhh24') sdatetime
 from
 NOKLTE_PS_LQOS_lncel_hour  PMRAW
 where
-period_start_time between to_date(&1,'yyyymmddhh24') and to_date(&2,'yyyymmddhh24')
+period_start_time in (&3)
 --AND PERIOD_DURATION=15
 group by
 to_char(period_start_time,'yyyymmddhh24'),MRBTS_ID,LNBTS_ID,LNCEL_ID,to_char(period_start_time,'yyyymmddhh24')||LNCEL_ID
@@ -680,7 +680,7 @@ to_char(period_start_time,'yyyymmddhh24') sdatetime
 from
 NOKLTE_PS_LUEQ_lncel_hour  PMRAW
 where
-period_start_time between to_date(&1,'yyyymmddhh24') and to_date(&2,'yyyymmddhh24')
+period_start_time in (&3)
 --AND PERIOD_DURATION=15
 group by
 to_char(period_start_time,'yyyymmddhh24'),MRBTS_ID,LNBTS_ID,LNCEL_ID,to_char(period_start_time,'yyyymmddhh24')||LNCEL_ID

@@ -1,6 +1,6 @@
 select
-SDATE
-,CITY
+SDATE,
+CITY
 ,round(100.00*sum(RRC连接建立成功次数)/sum(RRC连接建立请求次数),2) RRC连接建立成功率
 ,round(100.00*sum(ERAB建立成功数REAL)/sum(ERAB建立请求数),2) ERAB建立成功率REAL
 ,round(100.00*sum(ERAB建立成功数)/sum(ERAB建立请求数),2) ERAB建立成功率
@@ -17,5 +17,8 @@ SDATE
 ,round(100.00*(sum(ESRVCC请求次数)-sum(ESRVCC切换失败次数))/sum(ESRVCC请求次数),2) SRVCC切换出成功率
 from "city_hour-日常监控"
 where CITY in ("湛江","阳江","茂名","梅州","潮州")
-group by SDATE,CITY
-order by CITY,SDATE
+and SDATE between &1 and &2
+group by SDATE,
+CITY
+order by 
+CITY,SDATE
