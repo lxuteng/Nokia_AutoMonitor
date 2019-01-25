@@ -69,6 +69,7 @@ import datetime
 import time
 
 print(datetime.datetime.now().strftime('%Y_%m_%d_%H_%M_%S'))
+print(datetime.datetime.now().strftime('%H'))
 
 temp_time_now = time.localtime()
 temp_time = time.strftime('%Y_%m_%d_%H_%M_%S', temp_time_now)

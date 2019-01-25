@@ -1,5 +1,6 @@
 
 select 
+maxue.sdate SDATE,
 maxue_para.enb_cell,
 maxue_para.VERSION VERSION,
 maxue_para.带宽,
@@ -344,12 +345,12 @@ having (
 (round(max(maxue.最大激活用户数)/max(least(maxue_para.cqi资源,maxue_para.sr资源,maxue_para.maxNumActUE,maxue_para.maxNumRrc,maxue_para.maxNumRrcEmergency))*100,0)>70
        and max(least(maxue_para.cqi资源,maxue_para.sr资源,maxue_para.maxNumActUE,maxue_para.maxNumRrc,maxue_para.maxNumRrcEmergency))<300)
        or 
-(round(max(maxue.最大激活用户数)/max(least(maxue_para.cqi资源,maxue_para.sr资源,maxue_para.maxNumActUE,maxue_para.maxNumRrc,maxue_para.maxNumRrcEmergency))*100,0)>85    
+(round(max(maxue.最大激活用户数)/max(least(maxue_para.cqi资源,maxue_para.sr资源,maxue_para.maxNumActUE,maxue_para.maxNumRrc,maxue_para.maxNumRrcEmergency))*100,0)>30    
        and max(least(maxue_para.cqi资源,maxue_para.sr资源,maxue_para.maxNumActUE,maxue_para.maxNumRrc,maxue_para.maxNumRrcEmergency))between 300 and 500)
        or 
        (round(max(maxue.最大激活用户数)/max(least(maxue_para.cqi资源,maxue_para.sr资源,maxue_para.maxNumActUE,maxue_para.maxNumRrc,maxue_para.maxNumRrcEmergency))*100,0)>95    
        and max(least(maxue_para.cqi资源,maxue_para.sr资源,maxue_para.maxNumActUE,maxue_para.maxNumRrc,maxue_para.maxNumRrcEmergency))>=500)
        )
-group by maxue_para.enb_cell,VERSION,带宽,actDrx
+group by maxue_para.enb_cell,VERSION,带宽,actDrx,maxue.sdate
 order by 配置最大激活用户数,带宽,actDrx
 --&1&2

@@ -15,6 +15,11 @@ from io import BytesIO
 import base64
 from matplotlib import pyplot as plt
 
+import smtplib
+from email.mime.text import MIMEText
+from email.mime.multipart import MIMEMultipart
+from email.mime.application import MIMEApplication
+
 font = {'family': 'SimHei',
         'weight': 'bold',
         # 'size': '16'
@@ -64,7 +69,7 @@ class Main:
                         temp_value = [j.value for j in temp_row]
                         if temp_value[2] == '启用':
                             self.config_list[temp_sheet_name][temp_value[
-                                1]] = temp_value[0]
+                                1]] = [temp_value[0], temp_value[3]]
 
                 elif temp_sheet_name == 'sql_script_map_local':
                     temp_iter_rows = temp_f_base_data_wb_sheet.iter_rows()
@@ -83,7 +88,7 @@ class Main:
                         self.config_list[temp_sheet_name][temp_value[
                             0]] = temp_value[1:]
 
-                elif temp_sheet_name == '生成图表kpi':
+                elif temp_sheet_name == '生成趋势图kpi':
                     self.config_list[temp_sheet_name] = []
                     temp_iter_rows = temp_f_base_data_wb_sheet.iter_rows()
                     next(temp_iter_rows)
@@ -150,7 +155,7 @@ class Main:
                     self.get_sql_text(
                         temp_sql,
                         'online',
-                        self.config_list['sql_script_map'][temp_sql],
+                        self.config_list['sql_script_map'][temp_sql][0],
                         db_name
                     ), cc)
 
@@ -202,6 +207,7 @@ class Main:
 
                 except:
                     traceback.print_exc()
+        print(db_name,'数据获取完毕，待入库...')
         return data_list
 
     def get_sql_text(self, sql_name, online_type, time_type, temp_cp):
@@ -302,6 +308,7 @@ class Main:
                 check_same_thread=False
             )
             for temp_sql in temp_data_list:
+                print('入库中...',temp_sql)
                 pandas.io.sql.to_sql(
                     temp_data_list[temp_sql],
                     temp_sql,
@@ -526,11 +533,66 @@ class Main:
         temp_html += self.to_html(
             df[df.SDATE >= int(temp_time_list[0])]
         )
-        for temp_kpi in self.config_list['生成图表kpi']:
+        for temp_kpi in self.config_list['生成趋势图kpi']:
             temp_html += self.to_image(df, temp_kpi)
 
         with open('123.html', 'w') as f_html:
             f_html.write(temp_html)
+
+        return temp_html
+
+    def email(self, in_mail_text):
+
+        if self.config_list['e_mail']['启用Emali功能'] != '启用':
+            return 'end_email'
+
+        en_time = self.config_list['e_mail']['允许邮件发送时段'].split(',')
+        if self.temp_time_now.strftime('%H') not in en_time:
+            print('>>> 当前未在允许邮件发送时段内，邮件未发送！')
+            return 'end_email'
+
+        smtp_servers = self.config_list['e_mail']['smtp服务器']
+        address_from = self.config_list['e_mail']['邮箱用户名']
+        pass_word = self.config_list['e_mail']['邮箱密码']
+
+        address_to = self.config_list['e_mail']['主送人员'].split(',')
+        address_cc = self.config_list['e_mail']['抄送人员'].split(',')
+        address_all = address_to + address_cc
+
+        mail_subject = self.config_list['e_mail']['邮件主题']
+
+        # 邮件主体
+        text_part = MIMEText(in_mail_text, 'html', 'utf-8')
+
+        # 邮件附件
+        excel_file_name = os.path.split(kpi_list_temp)[-1]
+        excel_part = MIMEApplication(open(kpi_list_temp, 'rb').read())
+        excel_part.add_header('Content-Disposition', 'attachment',
+                              filename=excel_file_name)
+
+        # 生成邮件相关设置信息
+        mail_message = MIMEMultipart()
+        mail_message['Subject'] = mail_subject + '_' + self.temp_time
+
+        mail_message['From'] = address_from
+
+        mail_message['To'] = ";".join(address_to)
+        mail_message['Cc'] = ";".join(address_cc)
+
+        mail_message.attach(text_part)
+        mail_message.attach(excel_part)
+
+        mail_message["Accept-Language"] = "zh-CN"
+        mail_message["Accept-Charset"] = "ISO-8859-1,utf-8"
+
+        try:
+            server = smtplib.SMTP(smtp_servers)
+            server.login(address_from, pass_word)
+            server.sendmail(address_from, address_all, mail_message.as_string())
+            print('>>> 邮件发送完成！')
+            server.quit()
+        except smtplib.SMTPException as e:
+            print('error:', e)
 
 
 if __name__ == '__main__':
@@ -540,12 +602,11 @@ if __name__ == '__main__':
     main = Main()
     main.online_db_process()
     main.local_db_operator()
-    main.report()
+    mail_text = main.report()
+    main.email(mail_text)
     print(''.join((time.strftime('%Y/%m/%d %H:%M:%S', time.localtime()))))
-    print(''.join((
-        '>>> 历时：',
-        time.strftime(
-            '%Y/%m/%d %H:%M:%S',
-            time.gmtime(time.time() - star_time)
+    print(''.join(('>>> 历时：', time.strftime(
+        '%Y/%m/%d %H:%M:%S',
+        time.gmtime(time.time() - star_time)
         )
     )))

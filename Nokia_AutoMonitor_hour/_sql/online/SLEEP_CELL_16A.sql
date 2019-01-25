@@ -7,7 +7,7 @@ when substr(cel_name,1,2)='ZJ' or substr(bts_name,1,2)='ZJ'   then  'ZhanJiang'
 else 'N/A'
 end city  
 --- ,to_char(sysdate,'yyyymmddhh24') cur_time,
-,to_char(M8020.period_start_time,'YYYYMMDDHH24')  start_time ,
+,to_char(M8020.period_start_time,'YYYYMMDDHH24')  sdate ,
 enb_id,cell_id,bts_version
 ,cel_name     ,count(enb_id)  "ÐÝÃßÊ±¶ÎÊý" 
 
