@@ -1,1 +1,0 @@
-select * from maxue_hour

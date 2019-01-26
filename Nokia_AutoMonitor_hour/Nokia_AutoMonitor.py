@@ -8,8 +8,9 @@ import cx_Oracle
 import traceback
 import datetime
 import sqlite3
-import random
-import csv
+import pyDes
+# import random
+# import csv
 import time
 from io import BytesIO
 import base64
@@ -28,16 +29,71 @@ plt.rc('font', **font)
 plt.rc('axes', unicode_minus=False)
 
 
+def copy_right():
+    print('\n')
+    print(u"""
+    ------------------------------------------
+    -   Welcome to use tools!                -
+    -   Author : xuteng.lin                  -
+    -   E_mail : xuteng.lin@huanuo-nsb.com   -
+    ------------------------------------------
+    """)
+    print('\n')
+    auth_time = int(time.strftime('%Y%m%d', time.localtime(time.time())))
+
+    self_key = 'lxtnokia'
+    self_iv = 'nokialxt'
+    main_path = os.path.split(os.path.abspath(sys.argv[0]))[0]
+    try:
+        temp_license = open(os.path.join(main_path, 'license')).read()
+    except:
+        print(u'>>> 无license文件，请联系作者申请!')
+        os.system("pause")
+        sys.exit()
+    k = pyDes.des(self_key,
+                  mode=pyDes.CBC,
+                  IV=self_iv,
+                  pad=None,
+                  padmode=pyDes.PAD_PKCS5)
+    decryptstr = str(k.decrypt(base64.b64decode(temp_license)),
+                     encoding='utf-8').split('-')
+    if decryptstr[3] == 'Nokia_AutoMonitor_hour':
+        if auth_time > int(decryptstr[2]):
+            print(u'>>> 试用版本已过期，请更新！')
+            os.system("pause")
+            sys.exit()
+    else:
+        print(u'>>> license错误，请联系作者申请！')
+        os.system("pause")
+        sys.exit()
+
+    print(u'''
+    update log:
+
+    2019-01-26 初版；
+
+
+
+    ''')
+    print(u'-' * 36)
+    print(u'      >>>   starting   <<<')
+    print(u'-' * 36)
+    print(u'\n')
+    time.sleep(1)
+
+
 class Main:
 
     def __init__(self):
         """初始化"""
+        copy_right()
         self.main_path = os.path.split(os.path.abspath(sys.argv[0]))[0]
         # 获取配置文件
         self.config_list = {}
         self.get_config()
         self.temp_time_now = datetime.datetime.now()
         self.temp_time = self.temp_time_now.strftime('%Y_%m_%d_%H_%M_%S')
+        self.add_type_init = 0
 
     def get_config(self):
         # 初始化配置列表
@@ -69,7 +125,11 @@ class Main:
                         temp_value = [j.value for j in temp_row]
                         if temp_value[2] == '启用':
                             self.config_list[temp_sheet_name][temp_value[
-                                1]] = [temp_value[0], temp_value[3]]
+                                1]] = [temp_value[0],
+                                       temp_value[2],
+                                       temp_value[3],
+                                       temp_value[4],
+                                       ]
 
                 elif temp_sheet_name == 'sql_script_map_local':
                     temp_iter_rows = temp_f_base_data_wb_sheet.iter_rows()
@@ -78,7 +138,10 @@ class Main:
                         temp_value = [j.value for j in temp_row]
                         if temp_value[2] == '启用':
                             self.config_list[temp_sheet_name][temp_value[
-                                1]] = temp_value[0]
+                                1]] = [temp_value[0],
+                                       temp_value[3],
+                                       temp_value[4],
+                                       ]
 
                 elif temp_sheet_name == 'report_table_range':
                     temp_iter_rows = temp_f_base_data_wb_sheet.iter_rows()
@@ -104,7 +167,7 @@ class Main:
                         self.config_list[
                             temp_sheet_name
                         ][temp_value[0]] = temp_value[1]
-        print(self.config_list)
+        # print(self.config_list)
 
     def online_db_process(self):
         # 多进程到不同的数据库上获取数据
@@ -151,6 +214,7 @@ class Main:
 
         if connect_state == 1:
             for temp_sql in self.config_list['sql_script_map']:
+                print('正在获取online数据...', temp_sql)
                 self.online_get_data(
                     self.get_sql_text(
                         temp_sql,
@@ -171,43 +235,28 @@ class Main:
                         )
                         if len(temp_data) != 0:
                             data_list[temp_sql] = temp_data
-                            f_base_data_wb = openpyxl.load_workbook(
-                                            path_base_data_log, read_only=False)
+                            # 保存采集记录
+                            if self.config_list['sql_script_map'][temp_sql][
+                                    0] not in ['para', ]:
+                                f_base_data_wb = openpyxl.load_workbook(
+                                    path_base_data_log,
+                                    read_only=False)
 
-                            temp_f_base_data_wb_sheet = f_base_data_wb[
-                                '数据采集记录表']
-                            for temp_sdate in sorted(list(set(
-                                    temp_data.SDATE))):
-                                temp_low = [
-                                    db_name,
-                                    temp_sql,
-                                    temp_sdate,
-                                ]
-                                temp_f_base_data_wb_sheet.append(temp_low)
-
-                            a = 1
-                            b = 1
-                            while a == 1:
-                                if b < 5:
-                                    try:
-                                        f_base_data_wb.save(
-                                            path_base_data_log)
-                                        a = 0
-                                    except:
-                                        print(
-                                            '>>> {0}等待数据写入,'
-                                            '重试次数{1}....'.format(db_name, b)
-                                        )
-                                        time.sleep(random.randint(1, 5))
-                                        b += 1
-                                else:
-                                    print(
-                                        '>>> 数据采集记录表.xlsx写入异常，请检查!')
-                                    a = 0
+                                temp_f_base_data_wb_sheet = f_base_data_wb[
+                                    '数据采集记录表']
+                                for temp_sdate in sorted(list(set(
+                                        temp_data.SDATE))):
+                                    temp_low = [
+                                        db_name,
+                                        temp_sql,
+                                        temp_sdate,
+                                    ]
+                                    temp_f_base_data_wb_sheet.append(temp_low)
+                                f_base_data_wb.save(path_base_data_log)
 
                 except:
                     traceback.print_exc()
-        print(db_name,'数据获取完毕，待入库...')
+        print(db_name, '数据获取完毕，待入库...')
         return data_list
 
     def get_sql_text(self, sql_name, online_type, time_type, temp_cp):
@@ -253,6 +302,15 @@ class Main:
 
         return str(start_time), str(end_time)
 
+    def get_sql_between_time_item(self, time_num):
+        time_item_list = []
+        for temp_i in range(time_num + 1):
+            temp_time_item = (self.temp_time_now - datetime.timedelta(
+                hours=temp_i)).strftime('%Y%m%d%H')
+            time_item_list.append(temp_time_item)
+
+        return time_item_list
+
     def get_sql_between_time(self, time_type, temp_cp, temp_sql_name):
         start_time = 0
         end_time = 0
@@ -289,6 +347,7 @@ class Main:
             )).strftime('%Y%m%d%H')
             end_time = self.temp_time_now.strftime('%Y%m%d%H')
 
+            # 获取独立时段
             for temp_i in range(self.config_list['main']['获取最近连续时段数']+1):
                 temp_time_item = (self.temp_time_now - datetime.timedelta(
                     hours=temp_i)).strftime('%Y%m%d%H')
@@ -308,14 +367,28 @@ class Main:
                 check_same_thread=False
             )
             for temp_sql in temp_data_list:
-                print('入库中...',temp_sql)
-                pandas.io.sql.to_sql(
-                    temp_data_list[temp_sql],
+                print('入库中...', temp_sql)
+                add_type = 'append'
+                if self.config_list['sql_script_map'][temp_sql][2] == '覆盖':
+                    if self.add_type_init == 0:
+                        add_type = 'replace'
+                temp_data_list[temp_sql].to_sql(
                     temp_sql,
                     con=local_conn,
-                    if_exists='append'
+                    if_exists=add_type,
+                    chunksize=500
                 )
+                print('入库完毕...', temp_sql)
+                # pandas.io.sql.to_sql(
+                #     temp_data_list[temp_sql],
+                #     temp_sql,
+                #     con=local_conn,
+                #     if_exists=add_type,
+                #     chunksize=1000
+                # )
+
             local_conn.close()
+            self.add_type_init = 1
         except:
             traceback.print_exc()
 
@@ -373,6 +446,7 @@ class Main:
 
         cu = local_conn.cursor()
         for temp_local_sql in self.config_list['sql_script_map_local']:
+            print('获取本地数据', temp_local_sql)
             f_sql = open(
                 os.path.join(
                     self.main_path,
@@ -381,9 +455,20 @@ class Main:
                 ), encoding='utf-8-sig'
             )
             sql_scr = f_sql.read()
-            if temp_local_sql == 'city_hour-日常监控':
+
+            # 需要提供时段的sql脚本
+            # between_time_list = [
+            #     'city_cell_hour_all',
+            #     'top_拥塞小区'
+            # ]
+            # if temp_local_sql in between_time_list:
+
+            if self.config_list[
+                    'sql_script_map_local'][temp_local_sql][1] == '需要':
                 temp_time_list = self.get_sql_between_time_simp(
-                    'hour', self.config_list['main']['获取最近连续时段数'])
+                    self.config_list['sql_script_map_local'][temp_local_sql][0],
+                    self.config_list['sql_script_map_local'][temp_local_sql][2],
+                )
                 temp_start_time = temp_time_list[0]
                 temp_end_time = temp_time_list[1]
                 sql_scr = sql_scr.replace(
@@ -410,20 +495,20 @@ class Main:
                 if self.config_list['report_table_range'][kpi_name][2] is None:
                     if kpi_value <= self.config_list[
                             'report_table_range'][kpi_name][1]:
-                        temp_table_str = """      <td><b><font 
+                        temp_table_str = """      <td bgcolor="#ffee93"><b><font 
                         color="#B8860B">"""
                         temp_table_str += str(kpi_value)
                         temp_table_str += """</font></b></td>\n"""
                 else:
                     if kpi_value <= self.config_list['report_table_range'][
                             kpi_name][2]:
-                        temp_table_str = """      <td><b>"""
+                        temp_table_str = """      <td bgcolor="#ffc09f"><b>"""
                         temp_table_str += """<font color="#FF0000">"""
                         temp_table_str += str(kpi_value)
                         temp_table_str += """</font></b></td>\n"""
                     elif kpi_value <= self.config_list['report_table_range'][
                             kpi_name][1]:
-                        temp_table_str = """      <td><b>"""
+                        temp_table_str = """      <td bgcolor="#ffee93"><b>"""
                         temp_table_str += """<font color="#B8860B">"""
                         temp_table_str += str(kpi_value)
                         temp_table_str += """</font></b></td>\n"""
@@ -432,20 +517,20 @@ class Main:
                 if self.config_list['report_table_range'][kpi_name][2] is None:
                     if kpi_value >= self.config_list[
                             'report_table_range'][kpi_name][1]:
-                        temp_table_str = """      <td><b>"""
+                        temp_table_str = """      <td bgcolor="#ffee93"><b>"""
                         temp_table_str += """<font color="#B8860B">"""
                         temp_table_str += str(kpi_value)
                         temp_table_str += """</font></b></td>\n"""
                 else:
                     if kpi_value >= self.config_list['report_table_range'][
                             kpi_name][2]:
-                        temp_table_str = """      <td><b>"""
+                        temp_table_str = """      <td bgcolor="#ffc09f"><b>"""
                         temp_table_str += """<font color="#FF0000">"""
                         temp_table_str += str(kpi_value)
                         temp_table_str += """</font></b></td>\n"""
                     elif kpi_value >= self.config_list['report_table_range'][
                             kpi_name][1]:
-                        temp_table_str = """      <td><b>"""
+                        temp_table_str = """      <td bgcolor="#ffee93"><b>"""
                         temp_table_str += """<font color="#B8860B">"""
                         temp_table_str += str(kpi_value)
                         temp_table_str += """</font></b></td>\n"""
@@ -510,7 +595,8 @@ class Main:
     @staticmethod
     def to_image_df(df, kpi_name):
 
-        temp_v = [str(i)[-2:] for i in list(df[df['CITY'] == '潮州']['SDATE'])]
+        temp_v = [str(i)[-2:] for i in list(df[df['CITY'] == '潮州'][
+                                                'SDATE'])]
         temp_city_list = sorted(list(set(df['CITY'])))
 
         temp_data_list = [
@@ -523,7 +609,7 @@ class Main:
     def report(self):
         df = pandas.read_excel(
             kpi_list_temp,
-            sheet_name='city_hour-日常监控',
+            sheet_name='city_cell_hour_all',
             index_col=False
         )
         temp_html = ''
@@ -536,7 +622,16 @@ class Main:
         for temp_kpi in self.config_list['生成趋势图kpi']:
             temp_html += self.to_image(df, temp_kpi)
 
-        with open('123.html', 'w') as f_html:
+        temp_html_name = os.path.join(
+            self.main_path,
+            '_report',
+            ''.join((
+                'All_kpi_detail_list_',
+                self.temp_time,
+                '.html'
+            ))
+        )
+        with open(temp_html_name, 'w') as f_html:
             f_html.write(temp_html)
 
         return temp_html
@@ -594,6 +689,40 @@ class Main:
         except smtplib.SMTPException as e:
             print('error:', e)
 
+    def data_clean(self):
+        if main.config_list['main']['是否自动清除数据'] == '是':
+            print('清除数据开始...')
+            for temp_table in self.config_list['sql_script_map']:
+                if self.config_list['sql_script_map'][temp_table][1] == '启用':
+                    if self.config_list['sql_script_map'][temp_table][
+                            2] == '添加':
+                        time_num = self.config_list[
+                            'sql_script_map'][temp_table][3]
+                        if time_num is not None:
+                            time_item = self.get_sql_between_time_item(time_num)
+                            time_item_text = ','.join(time_item)
+                            f_sql = open(
+                                os.path.join(
+                                    self.main_path,
+                                    '_sql/local',
+                                    'data_clean.sql'),
+                                encoding='utf-8-sig'
+                            )
+                            sql_scr = f_sql.read()
+                            sql_scr = sql_scr.replace(
+                                '&table',
+                                temp_table).replace('&time_item',
+                                                    time_item_text)
+                            local_conn = sqlite3.connect(
+                                os.path.join(self.main_path, '_db', 'db.db'),
+                                check_same_thread=False
+                            )
+                            cu = local_conn.cursor()
+                            cu.execute(sql_scr)
+                            local_conn.commit()
+                            cu.close()
+                            local_conn.close()
+
 
 if __name__ == '__main__':
     multiprocessing.freeze_support()
@@ -604,6 +733,7 @@ if __name__ == '__main__':
     main.local_db_operator()
     mail_text = main.report()
     main.email(mail_text)
+    main.data_clean()
     print(''.join((time.strftime('%Y/%m/%d %H:%M:%S', time.localtime()))))
     print(''.join(('>>> 历时：', time.strftime(
         '%Y/%m/%d %H:%M:%S',

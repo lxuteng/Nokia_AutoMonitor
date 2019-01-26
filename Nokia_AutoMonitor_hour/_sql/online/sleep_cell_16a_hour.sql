@@ -1,5 +1,3 @@
-
-
 select distinct
 case when substr(cel_name,1,2)='YJ' or substr(bts_name,1,2)='YJ' then  'YangJiang'
 when substr(cel_name,1,2)='CZ' or substr(bts_name,1,2)='CZ'    then  'ChaoZhou'
@@ -8,7 +6,7 @@ when substr(cel_name,1,2)='MZ' or substr(bts_name,1,2)='MZ'  then  'MeiZhou'
 when substr(cel_name,1,2)='ZJ' or substr(bts_name,1,2)='ZJ'   then  'ZhanJiang'
 else 'N/A'
 end city  
- ,to_char(sysdate,'yyyymmddhh24') cur_time,
+ ,to_char(sysdate,'yyyymmddhh24') sdate,
 ---to_char(M8020.period_start_time,'yyyymmddhh24')  start_time ,
 enb_id,
 cell_id,

@@ -220,13 +220,15 @@ SELECT comm.sdate
      ,enb_id || '_' || cell_id enb_cell
      ,enb_id,
 
-         case  when ((enb_id>=655360 and enb_id<=656383 ) or (enb_id>= 686080 and enb_id<=686591 ) or (enb_id>= 696320 and enb_id<=696831 )or (enb_id>= 119296 and enb_id<=120831 )) then 'ZhanJiang'
-              when ((enb_id>=656384 and enb_id<=657151 ) or (enb_id>= 683520 and enb_id<=683775 ) or (enb_id>= 698880 and enb_id<=699647 ) or (enb_id>= 711168and enb_id<=712191 ))then 'MaoMing'
-              when ((enb_id>=659712 and enb_id<=660223 ) or (enb_id >= 684032 and enb_id <=684287 ) or(enb_id>= 701184 and enb_id<=701951 ) or (enb_id>= 716800 and enb_id<=717055 ) or (enb_id >=822528 and enb_id <=823807) or (enb_id >=201728 and enb_id <=201983) or (enb_id >=837888 and enb_id <=838399) or (enb_id >=340736 and enb_id <=341247)or (enb_id >=561920 and enb_id <=562431) or (enb_id >=895488 and enb_id <=896255)) then 'ChaoZhou'
-              when ((enb_id>=660736 and enb_id<=661247 ) or (enb_id >= 683776 and enb_id <=684031 ) or(enb_id>= 702464 and enb_id<=703487 ) ) then 'MeiZhou'
-              when ((enb_id>=662272 and enb_id<=662783 ) or (enb_id>= 704000 and enb_id<=704511 ) or (enb_id >=719616 and enb_id <=720127)) then 'YangJiang'
-              else 'NA'      
-        end City
+case
+when ((enb_id >= '199680' and enb_id <= '199935')or (enb_id >= '435456' and enb_id <= '435711')or (enb_id >= '683520' and enb_id <= '683775')or (enb_id >= '337664' and enb_id <= '338175')or (enb_id >= '559360' and enb_id <= '559871')or (enb_id >= '570368' and enb_id <= '571135')or (enb_id >= '656384' and enb_id <= '657151')or (enb_id >= '698880' and enb_id <= '699647')or (enb_id >= '858368' and enb_id <= '859135')or (enb_id >= '891648' and enb_id <= '892415')or (enb_id >= '294656' and enb_id <= '295679')or (enb_id >= '711168' and enb_id <= '712191')or (enb_id >= '815616' and enb_id <= '817663')) then '茂名'
+when ((enb_id >= '869888' and enb_id <= '870143')or (enb_id >= '887808' and enb_id <= '888063')or (enb_id >= '198912' and enb_id <= '199423')or (enb_id >= '557056' and enb_id <= '557567')or (enb_id >= '567552' and enb_id <= '568063')or (enb_id >= '575488' and enb_id <= '575999')or (enb_id >= '686080' and enb_id <= '686591')or (enb_id >= '696320' and enb_id <= '696831')or (enb_id >= '838912' and enb_id <= '839423')or (enb_id >= '335872' and enb_id <= '336639')or (enb_id >= '900608' and enb_id <= '901375')or (enb_id >= '903680' and enb_id <= '904447')or (enb_id >= '448256' and enb_id <= '449279')or (enb_id >= '655360' and enb_id <= '656383')or (enb_id >= '119296' and enb_id <= '120831')or (enb_id >= '809728' and enb_id <= '812543')) then '湛江'
+when ((enb_id >= '684032' and enb_id <= '684287')or (enb_id >= '701184' and enb_id <= '701951')or (enb_id >= '659712' and enb_id <= '660223')or (enb_id >= '716800' and enb_id <= '717055')or (enb_id >= '201728' and enb_id <= '201983')or (enb_id >= '822528' and enb_id <= '823807')or (enb_id >= '837888' and enb_id <= '838399')or (enb_id >= '340736' and enb_id <= '341247')or (enb_id >= '561920' and enb_id <= '562431')or (enb_id >= '895488' and enb_id <= '896255'))  then '潮州'
+when ((enb_id >= '660736' and enb_id <= '661247')or (enb_id >= '683776' and enb_id <= '684031')or (enb_id >= '702464' and enb_id <= '703487')or (enb_id >= '202496' and enb_id <= '203007')or (enb_id >= '824832' and enb_id <= '826879')or (enb_id >= '838400' and enb_id <= '838911')or (enb_id >= '562944' and enb_id <= '563455')or (enb_id >= '567040' and enb_id <= '567551')or (enb_id >= '897536' and enb_id <= '897791')or (enb_id >= '718080' and enb_id <= '718335'))  then '梅州'
+when ((enb_id >= '203776' and enb_id <= '204031')or (enb_id >= '564480' and enb_id <= '564991')or (enb_id >= '571136' and enb_id <= '571647')or (enb_id >= '662272' and enb_id <= '662783')or (enb_id >= '704000' and enb_id <= '704511')or (enb_id >= '707072' and enb_id <= '707327')or (enb_id >= '719616' and enb_id <= '720127')or (enb_id >= '829440' and enb_id <= '831231')or (enb_id >= '841216' and enb_id <= '841471')or (enb_id >= '841472' and enb_id <= '841727')or (enb_id >= '899996' and enb_id <= '900095'))  then '阳江'
+
+else 'NA'
+end City
 
 ,cell_id
 --,bts_ip

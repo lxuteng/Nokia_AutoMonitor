@@ -1,1 +1,0 @@
-select * from SLEEP_CELL_16A
