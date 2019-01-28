@@ -8,7 +8,7 @@ print(time.strftime('%Y/%m/%d %H:%M:%S', time.localtime()))
 star_time = time.time()
 
 path_base_data = r"D:\Test\overload\mre_ecid_20190117_sum.csv"
-sql_path = r"D:\python_object\Nokia_AutoMonitor\Nokia_AutoMonitor_hour\_temp\1.sql"
+sql_path = r"D:\python_object\Nokia_AutoMonitor\Nokia_AutoMonitor_hour\_sql\local\top_¸ß¸ººÉ.sql"
 save_path = r"D:\python_object\Nokia_AutoMonitor\Nokia_AutoMonitor_hour\_temp" \
             r"\abc.csv"
 

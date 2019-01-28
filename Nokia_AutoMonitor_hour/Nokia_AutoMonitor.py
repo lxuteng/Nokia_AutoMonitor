@@ -71,6 +71,7 @@ def copy_right():
     update log:
 
     2019-01-26 初版；
+    2019-01-28 修补已知bug；
 
 
 
@@ -167,7 +168,12 @@ class Main:
                         self.config_list[
                             temp_sheet_name
                         ][temp_value[0]] = temp_value[1]
-        # print(self.config_list)
+
+        if self.config_list['main']['本地数据库'] is None:
+            self.config_list['main']['本地数据库'] = os.path.join(
+                self.main_path,
+                '_db',
+            )
 
     def online_db_process(self):
         # 多进程到不同的数据库上获取数据
@@ -191,7 +197,7 @@ class Main:
             traceback.print_exc()
 
     def online_db_operator(self, db_name, db_information):
-        data_list = {}
+        data_list = {'db_name': db_name}
         connect_state = 0
         cc = ''
         try:
@@ -361,31 +367,26 @@ class Main:
         return str(start_time), str(end_time), set(time_item)
 
     def online_db_input_warehousing(self, temp_data_list):
+        db_name = temp_data_list['db_name']
         try:
             local_conn = sqlite3.connect(
                 os.path.join(self.main_path, '_db', 'db.db'),
                 check_same_thread=False
             )
             for temp_sql in temp_data_list:
-                print('入库中...', temp_sql)
-                add_type = 'append'
-                if self.config_list['sql_script_map'][temp_sql][2] == '覆盖':
-                    if self.add_type_init == 0:
-                        add_type = 'replace'
-                temp_data_list[temp_sql].to_sql(
-                    temp_sql,
-                    con=local_conn,
-                    if_exists=add_type,
-                    chunksize=500
-                )
-                print('入库完毕...', temp_sql)
-                # pandas.io.sql.to_sql(
-                #     temp_data_list[temp_sql],
-                #     temp_sql,
-                #     con=local_conn,
-                #     if_exists=add_type,
-                #     chunksize=1000
-                # )
+                if temp_sql != 'db_name':
+                    print(db_name, ':入库中...', temp_sql)
+                    add_type = 'append'
+                    if self.config_list['sql_script_map'][temp_sql][2] == '覆盖':
+                        if self.add_type_init == 0:
+                            add_type = 'replace'
+                    temp_data_list[temp_sql].to_sql(
+                        temp_sql,
+                        con=local_conn,
+                        if_exists=add_type,
+                        chunksize=500
+                    )
+                    print(db_name, ':入库完毕...', temp_sql)
 
             local_conn.close()
             self.add_type_init = 1
@@ -446,7 +447,8 @@ class Main:
 
         cu = local_conn.cursor()
         for temp_local_sql in self.config_list['sql_script_map_local']:
-            print('获取本地数据', temp_local_sql)
+            print('='*32)
+            print('>>>获取本地数据', temp_local_sql)
             f_sql = open(
                 os.path.join(
                     self.main_path,
@@ -455,13 +457,6 @@ class Main:
                 ), encoding='utf-8-sig'
             )
             sql_scr = f_sql.read()
-
-            # 需要提供时段的sql脚本
-            # between_time_list = [
-            #     'city_cell_hour_all',
-            #     'top_拥塞小区'
-            # ]
-            # if temp_local_sql in between_time_list:
 
             if self.config_list[
                     'sql_script_map_local'][temp_local_sql][1] == '需要':
@@ -495,8 +490,8 @@ class Main:
                 if self.config_list['report_table_range'][kpi_name][2] is None:
                     if kpi_value <= self.config_list[
                             'report_table_range'][kpi_name][1]:
-                        temp_table_str = """      <td bgcolor="#ffee93"><b><font 
-                        color="#B8860B">"""
+                        temp_table_str = """      <td bgcolor="#ffee93">"""
+                        temp_table_str += """<b><font color="#B8860B">"""
                         temp_table_str += str(kpi_value)
                         temp_table_str += """</font></b></td>\n"""
                 else:
@@ -613,9 +608,15 @@ class Main:
             index_col=False
         )
         temp_html = ''
+        # 邮件介绍
+        temp_html += """<body><h2><pre>Hi~ 各位领导、同事：</pre></h2>"""
+        temp_html += """<h3><pre>   以下是最近时段诺基亚五地市的指标概况，"""
+        temp_html += """请各位针对恶化指标进行优化处理，谢谢。；</pre></h3>"""
+        temp_html += """<h3><pre>   附件为各类TOP """
+        temp_html += """kpi恶化小区供优化参考。</pre></h3>"""
+
         temp_time_list = self.get_sql_between_time_simp(
             'hour', self.config_list['main']['报告报表呈现时段数'])
-        # temp_html += self.to_html(df)
         temp_html += self.to_html(
             df[df.SDATE >= int(temp_time_list[0])]
         )
@@ -649,9 +650,14 @@ class Main:
         smtp_servers = self.config_list['e_mail']['smtp服务器']
         address_from = self.config_list['e_mail']['邮箱用户名']
         pass_word = self.config_list['e_mail']['邮箱密码']
-
-        address_to = self.config_list['e_mail']['主送人员'].split(',')
-        address_cc = self.config_list['e_mail']['抄送人员'].split(',')
+        if self.config_list['e_mail']['主送人员'] is not None:
+            address_to = self.config_list['e_mail']['主送人员'].split(',')
+        else:
+            address_to = ''
+        if self.config_list['e_mail']['抄送人员'] is not None:
+            address_cc = self.config_list['e_mail']['抄送人员'].split(',')
+        else:
+            address_cc = ''
         address_all = address_to + address_cc
 
         mail_subject = self.config_list['e_mail']['邮件主题']
