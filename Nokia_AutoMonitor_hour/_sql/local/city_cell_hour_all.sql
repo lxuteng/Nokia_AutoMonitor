@@ -1,6 +1,9 @@
 select
 SDATE,
 CITY
+,round(sum(用户面PDCP上行数据量KB+用户面PDCP下行数据量KB)*1024/1000/1000/1000/1000,2) 数据业务量TB
+,round(sum(QCI1话务量Erl_all)/10000,2) QCI1话务量_万Erl
+,round(100.00*sum(RRC连接建立成功次数)/sum(RRC连接建立请求次数),2) RRC连接建立成功率
 ,round(100.00*sum(RRC连接建立成功次数)/sum(RRC连接建立请求次数),2) RRC连接建立成功率
 ,round(100.00*sum(ERAB建立成功数REAL)/sum(ERAB建立请求数),2) ERAB建立成功率REAL
 ,round(100.00*sum(ERAB建立成功数)/sum(ERAB建立请求数),2) ERAB建立成功率

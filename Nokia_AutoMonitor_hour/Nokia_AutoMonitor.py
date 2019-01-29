@@ -69,12 +69,9 @@ def copy_right():
 
     print(u'''
     update log:
-
     2019-01-26 初版；
     2019-01-28 修补已知bug；
-
-
-
+    2019-01-28 邮件正文添加TOP小区个数通报；显示细节调整；
     ''')
     print(u'-' * 36)
     print(u'      >>>   starting   <<<')
@@ -95,6 +92,9 @@ class Main:
         self.temp_time_now = datetime.datetime.now()
         self.temp_time = self.temp_time_now.strftime('%Y_%m_%d_%H_%M_%S')
         self.add_type_init = 0
+
+        # 统计top小区个数
+        self.num_top_cell_list = {}
 
     def get_config(self):
         # 初始化配置列表
@@ -142,6 +142,7 @@ class Main:
                                 1]] = [temp_value[0],
                                        temp_value[3],
                                        temp_value[4],
+                                       temp_value[5],
                                        ]
 
                 elif temp_sheet_name == 'report_table_range':
@@ -220,7 +221,7 @@ class Main:
 
         if connect_state == 1:
             for temp_sql in self.config_list['sql_script_map']:
-                print('正在获取online数据...', temp_sql)
+                print(db_name,':正在获取online数据...', temp_sql)
                 self.online_get_data(
                     self.get_sql_text(
                         temp_sql,
@@ -262,7 +263,7 @@ class Main:
 
                 except:
                     traceback.print_exc()
-        print(db_name, '数据获取完毕，待入库...')
+        print(db_name, ':数据获取完毕，待入库...')
         return data_list
 
     def get_sql_text(self, sql_name, online_type, time_type, temp_cp):
@@ -429,12 +430,16 @@ class Main:
                 worksheet_a = workbook_a[report_name]
             worksheet = workbook.create_sheet(report_name)
             worksheet.append(temp_head)
-
-            for temp_row in temp_cu.fetchall():
+            temp_value_list = temp_cu.fetchall()
+            for temp_row in temp_value_list:
                 worksheet_a.append(temp_row)
                 worksheet.append(temp_row)
             workbook_a.save(kpi_list)
             workbook.save(kpi_list_temp)
+
+            if self.config_list[
+                    'sql_script_map_local'][report_name][3] == '呈现':
+                self.get_top_cell_num(temp_value_list, report_name)
 
         except:
             traceback.print_exc()
@@ -567,11 +572,15 @@ class Main:
         return table_str
 
     def to_image(self, df, kpi_name):
+        # 设置画图长宽
+        plt.rcParams['figure.figsize'] = (6.0, 3.0)
         # 清除前面图表
         plt.figure()
+
         temp_x, temp_data_list = self.to_image_df(df, kpi_name)
         for temp_data in temp_data_list:
             plt.plot(temp_x, temp_data[0], label=temp_data[1])
+
         # plt.ylim(98,100)
         plt.legend()
         # plt.legend(loc='upper left')
@@ -611,9 +620,28 @@ class Main:
         # 邮件介绍
         temp_html += """<body><h2><pre>Hi~ 各位领导、同事：</pre></h2>"""
         temp_html += """<h3><pre>   以下是最近时段诺基亚五地市的指标概况，"""
-        temp_html += """请各位针对恶化指标进行优化处理，谢谢。；</pre></h3>"""
+        temp_html += """请各位针对恶化指标进行优化处理，谢谢；</pre></h3>\n"""
         temp_html += """<h3><pre>   附件为各类TOP """
-        temp_html += """kpi恶化小区供优化参考。</pre></h3>"""
+        temp_html += """kpi恶化小区供优化参考，其中：</pre></h3>\n"""
+        # 邮件正文添加top小区个数通报
+        for temp_table_name in self.num_top_cell_list:
+            temp_num = 0
+            temp_html_top_cell_num = """<h4><pre>      """
+            temp_html_top_cell_num += """<font color="#FF0000">"""
+            temp_html_top_cell_num += temp_table_name
+            temp_html_top_cell_num += """</font>"""
+            temp_html_top_cell_num += "："
+            for temp_city in sorted(list(self.num_top_cell_list[
+                                             temp_table_name].keys())):
+                if self.num_top_cell_list[temp_table_name][temp_city] != 0:
+                    temp_num += 1
+                    temp_html_top_cell_num += '{0}:{1}个；'.format(
+                        temp_city,
+                        self.num_top_cell_list[temp_table_name][temp_city]
+                    )
+            temp_html_top_cell_num += """</pre></h4>\n"""
+            if temp_num != 0:
+                temp_html += temp_html_top_cell_num
 
         temp_time_list = self.get_sql_between_time_simp(
             'hour', self.config_list['main']['报告报表呈现时段数'])
@@ -650,14 +678,12 @@ class Main:
         smtp_servers = self.config_list['e_mail']['smtp服务器']
         address_from = self.config_list['e_mail']['邮箱用户名']
         pass_word = self.config_list['e_mail']['邮箱密码']
+        address_to = []
+        address_cc = []
         if self.config_list['e_mail']['主送人员'] is not None:
             address_to = self.config_list['e_mail']['主送人员'].split(',')
-        else:
-            address_to = ''
         if self.config_list['e_mail']['抄送人员'] is not None:
             address_cc = self.config_list['e_mail']['抄送人员'].split(',')
-        else:
-            address_cc = ''
         address_all = address_to + address_cc
 
         mail_subject = self.config_list['e_mail']['邮件主题']
@@ -678,7 +704,9 @@ class Main:
         mail_message['From'] = address_from
 
         mail_message['To'] = ";".join(address_to)
-        mail_message['Cc'] = ";".join(address_cc)
+
+        if len(address_cc) != 0:
+            mail_message['Cc'] = ";".join(address_cc)
 
         mail_message.attach(text_part)
         mail_message.attach(excel_part)
@@ -697,7 +725,7 @@ class Main:
 
     def data_clean(self):
         if main.config_list['main']['是否自动清除数据'] == '是':
-            print('清除数据开始...')
+            print('正在清除数据历史数据...')
             for temp_table in self.config_list['sql_script_map']:
                 if self.config_list['sql_script_map'][temp_table][1] == '启用':
                     if self.config_list['sql_script_map'][temp_table][
@@ -726,8 +754,19 @@ class Main:
                             cu = local_conn.cursor()
                             cu.execute(sql_scr)
                             local_conn.commit()
+                            cu.execute('VACUUM')
                             cu.close()
                             local_conn.close()
+            print('清除历史数据完成！')
+
+    def get_top_cell_num(self, temp_value, temp_table_name):
+        if temp_table_name not in self.num_top_cell_list:
+            self.num_top_cell_list[temp_table_name] = {}
+        for temp_i in temp_value:
+            if temp_i[1] in self.num_top_cell_list[temp_table_name]:
+                self.num_top_cell_list[temp_table_name][temp_i[1]] += 1
+            else:
+                self.num_top_cell_list[temp_table_name][temp_i[1]] = 1
 
 
 if __name__ == '__main__':
