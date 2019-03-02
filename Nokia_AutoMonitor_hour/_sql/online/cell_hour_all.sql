@@ -191,8 +191,8 @@ end 无线利用率分子  --2017年10月13日更新
 ,sum(M8006C287+M8006C177+M8006C291) qci2掉线率分子 --2017年8月28日新增
 ,sum(qci2掉线率分母) qci2掉线率分母 --2017年8月28日新增
 --2017年9月12日新增
---,sum(interference105)  "干扰小区大于-105"
---,sum(interference110)  "干扰小区大于-110"
+,sum(interference105)  "干扰小区大于-105"
+,sum(interference110)  "干扰小区大于-110"
 -- 2017年9月24日 新增
 /*
 ,round(decode(sum(总小区数),0,0,sum(volte低接通小区数)/sum(总小区数)*100),2) "volte低接通占比"
@@ -210,7 +210,7 @@ end 无线利用率分子  --2017年10月13日更新
 ,Round(Decode(sum(srvcc请求次数ZB),0,100,100*sum(M8016C34)/sum(srvcc请求次数ZB)),2) esrvcc成功率ZB
 
 ,round(sum(M8006C45)/3600,2) "QCI1话务量Erl_all"
---,sum(激活用户数超300小区) 激活用户数超300小区数
+,sum(激活用户数超300小区) 激活用户数超300小区数
 FROM
 (
 SELECT comm.sdate
@@ -263,21 +263,21 @@ else M8013C65+M8013C66+M8013C67+M8013C68+M8013C69 end 拥塞次数 --ERAB掉线率分母 
 
 else M8016C25+M8006C176+M8006C177+M8006C178+M8006C179+M8006C180+M8006C257 end erab_drop_deno --ERAB掉线率分母 自适应RL55/15A 
 
-,case when bts_version = 'TL16A' or bts_version = 'TLF16A' then M8051C57
- else M8001C223 end 平均激活用户数 
-,case when bts_version = 'TL16A' or bts_version = 'TLF16A' then M8051C58
- else M8001C224 end 最大激活用户数     
-,case when bts_version = 'TL16A' or bts_version = 'TLF16A' then M8051C56
- else M8001C200 end   RRC最大连接数 
+,case when bts_version = 'LNT5.0' or bts_version = 'LNZ5.0' then M8001C223
+ else M8051C57 end 平均激活用户数 
+,case when bts_version = 'LNT5.0' or bts_version = 'LNZ5.0' then M8001C224
+ else M8051C58 end 最大激活用户数     
+,case when bts_version = 'LNT5.0' or bts_version = 'LNZ5.0' then M8001C200
+ else M8051C56 end   RRC最大连接数 
    
-,case when (bts_version='TL16A' or bts_version = 'TLF16A') then M8051C107/100
-      else M8001C147/100 end 下行有效RRC连接平均数 
-,case when (bts_version='TL16A' or bts_version = 'TLF16A') then M8051C109/100
-      else M8001C150/100 end 上行有效RRC连接平均数        
-,case when (bts_version='TL16A' or bts_version = 'TLF16A') then M8051C108
-      else M8001C148 end 下行有效RRC连接最大数
-,case when (bts_version='TL16A' or bts_version = 'TLF16A') then M8051C110
-      else M8001C151 end 上行有效RRC连接最大数  
+,case when (bts_version = 'LNT5.0' or bts_version = 'LNZ5.0') then M8001C147/100
+      else M8051C107/100 end 下行有效RRC连接平均数 
+,case when (bts_version = 'LNT5.0' or bts_version = 'LNZ5.0') then M8001C150/100
+      else M8051C109/100 end 上行有效RRC连接平均数        
+,case when (bts_version = 'LNT5.0' or bts_version = 'LNZ5.0') then M8001C148
+      else M8051C108 end 下行有效RRC连接最大数
+,case when (bts_version = 'LNT5.0' or bts_version = 'LNZ5.0') then M8001C151
+      else M8051C110 end 上行有效RRC连接最大数  
 
 
 ,case when (bts_version='LNT5.0' or bts_version = 'LNZ5.0' or bts_version='TL15A' or bts_version = 'TLF15A') then M8006C0-M8006C3-M8006C4-M8006C5

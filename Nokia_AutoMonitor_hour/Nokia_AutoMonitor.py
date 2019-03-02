@@ -221,7 +221,7 @@ class Main:
 
         if connect_state == 1:
             for temp_sql in self.config_list['sql_script_map']:
-                print(db_name,':正在获取online数据...', temp_sql)
+                print(db_name, ':正在获取online数据...', temp_sql)
                 self.online_get_data(
                     self.get_sql_text(
                         temp_sql,
@@ -716,6 +716,11 @@ class Main:
 
         try:
             server = smtplib.SMTP(smtp_servers)
+
+            # 解决 connection unexpectedly closed报错
+            server.ehlo()
+            server.starttls()
+
             server.login(address_from, pass_word)
             server.sendmail(address_from, address_all, mail_message.as_string())
             print('>>> 邮件发送完成！')
