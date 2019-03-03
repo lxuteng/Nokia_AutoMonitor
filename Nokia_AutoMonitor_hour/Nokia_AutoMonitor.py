@@ -10,7 +10,7 @@ import datetime
 import sqlite3
 import pyDes
 # import random
-# import csv
+import csv
 import time
 from io import BytesIO
 import base64
@@ -72,6 +72,7 @@ def copy_right():
     2019-01-26 初版；
     2019-01-28 修补已知bug；
     2019-01-28 邮件正文添加TOP小区个数通报；显示细节调整；
+    2019-03-02 优化TOP小区保存机制；
     ''')
     print(u'-' * 36)
     print(u'      >>>   starting   <<<')
@@ -143,6 +144,7 @@ class Main:
                                        temp_value[3],
                                        temp_value[4],
                                        temp_value[5],
+                                       temp_value[6],
                                        ]
 
                 elif temp_sheet_name == 'report_table_range':
@@ -245,24 +247,42 @@ class Main:
                             # 保存采集记录
                             if self.config_list['sql_script_map'][temp_sql][
                                     0] not in ['para', ]:
-                                f_base_data_wb = openpyxl.load_workbook(
-                                    path_base_data_log,
-                                    read_only=False)
 
-                                temp_f_base_data_wb_sheet = f_base_data_wb[
-                                    '数据采集记录表']
-                                for temp_sdate in sorted(list(set(
-                                        temp_data.SDATE))):
-                                    temp_low = [
-                                        db_name,
-                                        temp_sql,
-                                        temp_sdate,
-                                    ]
-                                    temp_f_base_data_wb_sheet.append(temp_low)
-                                f_base_data_wb.save(path_base_data_log)
+                                # csv版本
+                                with open(
+                                        path_base_data_log, 'a', newline=''
+                                ) as f:
+                                    f_csv_w = csv.writer(f)
+                                    for temp_sdate in sorted(list(set(
+                                            temp_data.SDATE))):
+                                        temp_low = [
+                                            db_name,
+                                            temp_sql,
+                                            temp_sdate,
+                                        ]
+                                        f_csv_w.writerow(temp_low)
+
+                                # excel版本
+                                # f_base_data_wb = openpyxl.load_workbook(
+                                #     path_base_data_log,
+                                #     read_only=False)
+                                #
+                                # temp_f_base_data_wb_sheet = f_base_data_wb[
+                                #     '数据采集记录表']
+                                # for temp_sdate in sorted(list(set(
+                                #         temp_data.SDATE))):
+                                #     temp_low = [
+                                #         db_name,
+                                #         temp_sql,
+                                #         temp_sdate,
+                                #     ]
+                                #     temp_f_base_data_wb_sheet.append(temp_low)
+                                # f_base_data_wb.save(path_base_data_log)
 
                 except:
-                    traceback.print_exc()
+                    pass
+                    # traceback.print_exc()
+
         print(db_name, ':数据获取完毕，待入库...')
         return data_list
 
@@ -324,29 +344,50 @@ class Main:
         time_item = []
         exit_time_list = {}
         global path_base_data_log
+
+        # csv版本
         path_base_data_log = os.path.join(
             self.main_path,
             '_db',
-            '数据采集记录表.xlsx')
-        f_base_data_wb = openpyxl.load_workbook(
-            path_base_data_log, read_only=True)
-        for temp_sheet_name in f_base_data_wb.sheetnames:
-            if temp_sheet_name not in exit_time_list:
-                exit_time_list[temp_sheet_name] = {}
-            temp_f_base_data_wb_sheet = f_base_data_wb[temp_sheet_name]
-            if temp_sheet_name == '数据采集记录表':
-                temp_iter_rows = temp_f_base_data_wb_sheet.iter_rows()
-                next(temp_iter_rows)
-                for temp_row in temp_iter_rows:
-                    temp_value = [j.value for j in temp_row]
-                    if temp_value[0] not in exit_time_list[temp_sheet_name]:
-                        exit_time_list[temp_sheet_name][temp_value[0]] = {}
-                    if temp_value[1] not in exit_time_list[temp_sheet_name][
-                            temp_value[0]]:
-                        exit_time_list[temp_sheet_name][temp_value[
-                            0]][temp_value[1]] = {}
-                    exit_time_list[temp_sheet_name][temp_value[
-                        0]][temp_value[1]][temp_value[2]] = temp_value[3]
+            '数据采集记录表.csv')
+        try:
+            with open(path_base_data_log, 'r') as f:
+                f_csv = csv.reader(f)
+                for temp_value in f_csv:
+                    if temp_value[0] not in exit_time_list:
+                        exit_time_list[temp_value[0]] = {}
+                    if temp_value[1] not in exit_time_list[temp_value[0]]:
+                        exit_time_list[temp_value[0]][temp_value[1]] = {}
+                    exit_time_list[
+                        temp_value[0]][temp_value[1]][temp_value[2]] = 0
+        except:
+            pass
+            # traceback.print_exc()
+
+        # excel版本
+        # path_base_data_log = os.path.join(
+        #     self.main_path,
+        #     '_db',
+        #     '数据采集记录表.xlsx')
+        # f_base_data_wb = openpyxl.load_workbook(
+        #     path_base_data_log, read_only=True)
+        # for temp_sheet_name in f_base_data_wb.sheetnames:
+        #     if temp_sheet_name not in exit_time_list:
+        #         exit_time_list[temp_sheet_name] = {}
+        #     temp_f_base_data_wb_sheet = f_base_data_wb[temp_sheet_name]
+        #     if temp_sheet_name == '数据采集记录表':
+        #         temp_iter_rows = temp_f_base_data_wb_sheet.iter_rows()
+        #         next(temp_iter_rows)
+        #         for temp_row in temp_iter_rows:
+        #             temp_value = [j.value for j in temp_row]
+        #             if temp_value[0] not in exit_time_list[temp_sheet_name]:
+        #                 exit_time_list[temp_sheet_name][temp_value[0]] = {}
+        #             if temp_value[1] not in exit_time_list[temp_sheet_name][
+        #                 temp_value[0]]:
+        #                 exit_time_list[temp_sheet_name][temp_value[
+        #                     0]][temp_value[1]] = {}
+        #             exit_time_list[temp_sheet_name][temp_value[
+        #                 0]][temp_value[1]][temp_value[2]] = temp_value[3]
 
         if time_type == 'hour':
             start_time = (self.temp_time_now - datetime.timedelta(
@@ -359,7 +400,7 @@ class Main:
                 temp_time_item = (self.temp_time_now - datetime.timedelta(
                     hours=temp_i)).strftime('%Y%m%d%H')
                 try:
-                    if temp_time_item not in exit_time_list['数据采集记录表'][
+                    if temp_time_item not in exit_time_list[
                             temp_cp][temp_sql_name]:
                         time_item.append(temp_time_item)
                 except:
@@ -395,11 +436,22 @@ class Main:
             traceback.print_exc()
 
     def write_kpi_detail(self, report_name, temp_cu):
+        detail_list = 0
+        if self.config_list[
+                'sql_script_map_local'][report_name][4] == '累计保存':
+            detail_list = 1
+
         try:
             kpi_list = os.path.join(
                 self.main_path,
                 '_report',
-                'All_kpi_detail_list.xlsx'
+                ''.join(
+                    (
+                        'Detail_list_',
+                        report_name,
+                        '.csv'
+                     )
+                )
             )
 
             global kpi_list_temp
@@ -412,10 +464,10 @@ class Main:
                     '.xlsx'
                 ))
             )
-            if not os.path.exists(kpi_list):
-                workbook_a = openpyxl.Workbook()
-                workbook_a.save(kpi_list)
-            workbook_a = openpyxl.load_workbook(kpi_list)
+            # if not os.path.exists(kpi_list):
+            #     workbook_a = openpyxl.Workbook()
+            #     workbook_a.save(kpi_list)
+            # workbook_a = openpyxl.load_workbook(kpi_list)
 
             if not os.path.exists(kpi_list_temp):
                 workbook = openpyxl.Workbook()
@@ -423,18 +475,23 @@ class Main:
             workbook = openpyxl.load_workbook(kpi_list_temp)
 
             temp_head = [i[0] for i in temp_cu.description]
-            if report_name not in workbook_a.sheetnames:
-                worksheet_a = workbook_a.create_sheet(report_name)
-                worksheet_a.append(temp_head)
-            else:
-                worksheet_a = workbook_a[report_name]
+            if detail_list:
+                if not os.path.exists(kpi_list):
+                    f = open(kpi_list, 'a', newline='')
+                    f_w = csv.writer(f)
+                    f_w.writerow(temp_head)
+                else:
+                    f = open(kpi_list, 'a', newline='')
+                    f_w = csv.writer(f)
             worksheet = workbook.create_sheet(report_name)
             worksheet.append(temp_head)
+
             temp_value_list = temp_cu.fetchall()
             for temp_row in temp_value_list:
-                worksheet_a.append(temp_row)
+                if detail_list:
+                    f_w.writerow(temp_row)
                 worksheet.append(temp_row)
-            workbook_a.save(kpi_list)
+
             workbook.save(kpi_list_temp)
 
             if self.config_list[
